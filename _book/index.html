@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Exploration of company information in R</title>
+  <meta name="description" content="Exploration of company information in R" />
+  <meta name="generator" content="bookdown 0.24 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Exploration of company information in R" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Exploration of company information in R" />
+  
+  
+  
+
+<meta name="author" content="Fabio Morea" />
+
+
+<meta name="date" content="2022-01-25" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+
+<link rel="next" href="companies-as-vectors.html"/>
+<script src="libs/header-attrs-2.11/header-attrs.js"></script>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.0.1/anchor-sections.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.0.1/anchor-sections.js"></script>
+
+
+
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Scope and objectives</a></li>
+<li class="chapter" data-level="" data-path="companies-as-vectors.html"><a href="companies-as-vectors.html"><i class="fa fa-check"></i>companies as vectors</a>
+<ul>
+<li class="chapter" data-level="" data-path="companies-as-vectors.html"><a href="companies-as-vectors.html#similarities-based-on-metric-features"><i class="fa fa-check"></i>similarities based on metric features</a></li>
+<li class="chapter" data-level="" data-path="companies-as-vectors.html"><a href="companies-as-vectors.html#custimized-distances"><i class="fa fa-check"></i>custimized distances</a></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="exploring-dataset-of-companies-in-fvg.html"><a href="exploring-dataset-of-companies-in-fvg.html"><i class="fa fa-check"></i>Exploring dataset of companies in fvg</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="exploring-dataset-of-companies-in-fvg.html"><a href="exploring-dataset-of-companies-in-fvg.html#a-similarity-function-between-companies-based-on-nace-codes"><i class="fa fa-check"></i><b>1.1</b> A similarity function between companies based on NACE codes</a></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="balance-sheet-data.html"><a href="balance-sheet-data.html"><i class="fa fa-check"></i>balance sheet data</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Exploration of company information in R</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="header">
+<h1 class="title">Exploration of company information in R</h1>
+<p class="author"><em>Fabio Morea</em></p>
+<p class="date"><em>2022-01-25</em></p>
+</div>
+<div id="scope-and-objectives" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Scope and objectives</h1>
+<p>This notebook aims to apply the knowledge acquired during the course <em>introduction to R</em> to a real dataset, to learn the usage of basic commands for data manipulation, visualization and computation as well as basic programming structures in R.</p>
+<p>The data used for the project is “imprese-fvg”, a dataset curated by Area Science Park as a part of <a href="https://www.innovationintelligence.it/">innovation intelligence</a> project, which aggregates information on companies in the Friuli Venezia Giulia region from different sources (sectors of activity, age, balance sheet data, financial ratings, participation in European projects, patents, certifications …)</p>
+<p>The project has been written using <strong>R-Studio</strong> and rendered with <a href="https://bookdown.org/"><strong>boowdown</strong></a> package.</p>
+<p>The project is divided in 4 sections:</p>
+<ol style="list-style-type: decimal">
+<li>introduction: working on a toy dataset, where each company is represented by 5 features, to learn basic data structures and computation</li>
+<li>imprese-fvg: loading the data from excel and csv files to a data.frame, subsetting</li>
+<li>financial-indicators</li>
+<li>managing dates: calculating the age of companies based on several dates</li>
+<li>handling non metric features: defining a custimized similarity function to identify <em>similar</em> companies and estimate distances in a multi dimensional space.</li>
+</ol>
+
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+<a href="companies-as-vectors.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"whatsapp": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": null,
+"search": {
+"engine": "fuse",
+"options": null
+},
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+</body>
+
+</html>

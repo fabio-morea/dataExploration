@@ -1,0 +1,32 @@
+--- 
+title: "Exploration of company information"
+author: "Fabio Morea"
+date: "`r Sys.Date()`"
+output:
+  bookdown::pdf_document2: default
+  bookdown::gitbook: default
+site: bookdown::bookdown_site
+documentclass: book
+bibliography: book.bib
+biblio-style: apalike
+link-citations: yes
+delete_merged_file: true
+---
+
+    
+# Scope and objectives  
+
+This notebook aims to apply the knowledge acquired during the course *introduction to R* to a real dataset, to learn the usage of basic commands for data manipulation, visualization and computation as well as basic programming structures in R. 
+
+The data used for the project is "imprese-fvg", a dataset curated by Area Science Park as a part of [innovation intelligence](https://www.innovationintelligence.it/) project, which aggregates information on companies in the Friuli Venezia Giulia region from different sources (sectors of activity, age, balance sheet data, financial ratings, participation in European projects, patents, certifications ...)
+
+The project has been  written using **R-Studio** and rendered with [**boowdown**](https://bookdown.org/) package. 
+
+The project is divided in 4 sections: 
+
+1) introduction: basic information on the project, the dataset. A sample feature selection, working on a toy dataset, where each company is represented by 5 features 
+2) imprese-fvg: loading the data from excel and csv files to a data.frame, subsetting
+3) financial-indicators
+3) managing dates: calculating the age of companies based on several dates
+4) handling non metric features: defining a custimized similarity function to identify *similar* companies and estimate distances in a multi dimensional space.
+
