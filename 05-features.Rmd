@@ -1,4 +1,10 @@
-# companies as vectors {-}
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# introduction {-}
 This section explores several options to represent companies as vectors in a multidimensional space. As a basic excercise, we are working on a toy dataset, where each company is represented by 5 features, so a company is represented by 
 the vector $X_i \in R^n$. 
 

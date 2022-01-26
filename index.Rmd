@@ -16,17 +16,26 @@ delete_merged_file: true
     
 # Scope and objectives  
 
-This notebook aims to apply the knowledge acquired during the course *introduction to R* to a real dataset, to learn the usage of basic commands for data manipulation, visualization and computation as well as basic programming structures in R. 
+This notebook explores the datasets that will presumably underpin future research work for the PhD in Applied Data Science and Artificial Intelligence.
 
-The data used for the project is "imprese-fvg", a dataset curated by Area Science Park as a part of [innovation intelligence](https://www.innovationintelligence.it/) project, which aggregates information on companies in the Friuli Venezia Giulia region from different sources (sectors of activity, age, balance sheet data, financial ratings, participation in European projects, patents, certifications ...)
+## Background information: 
+Area Science Park is a national research body that manages a science and technology park in Trieste (Italy), hosting 60 companies (tenants) engaged in research activities in the fields of ICT, lifesceinces and materials.
+Area is interested in measuring the effectiveness and efficiency of its activities, focusing in particular on monitoring the economic performance of tenans and comparing them with "similar" companies (mainly at a regional or national scale, but also with respect to the science and technology parks in Austria and Slovenia).
 
-The project has been  written using **R-Studio** and rendered with [**boowdown**](https://bookdown.org/) package. 
+Area Science Park can provide some relevant datasets as a part of the project [*innovation intelligence*](https://www.innovationintelligence.it/) that aims to analyze information on companies in the Friuli Venezia Giulia region. Main sources include the chamber of commerce, the Regional Labor Market Observatory, a rating agency, as well as surveys on samples of companies. 
 
-The project is divided in 4 sections: 
+## About this notebook 
+The notebook is divided in 6 sections: an introduction, a section for each dataset and a final section on potential future development.
 
-1) introduction: basic information on the project, the dataset. A sample feature selection, working on a toy dataset, where each company is represented by 5 features 
-2) imprese-fvg: loading the data from excel and csv files to a data.frame, subsetting
-3) financial-indicators
-3) managing dates: calculating the age of companies based on several dates
-4) handling non metric features: defining a custimized similarity function to identify *similar* companies and estimate distances in a multi dimensional space.
+1. Imprese_FVG
+2. Bilanci_FVG
+3. Rating_FVG 
+4. CO_FVG
+5. Features: A basic example of sample feature selection, on a small subset, where each company is represented by 5 features 
+6. Further development: calculating the age of companies based on several dates, handling non metric features: defining a custimized similarity function to identify *similar* companies and estimate distances in a multi-dimensional space.
+
+
+The notebook has been  written using **R-Studio** and rendered with [**boowdown**](https://bookdown.org/) package. 
+
+ 
 

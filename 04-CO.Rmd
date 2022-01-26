@@ -1,0 +1,81 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Exploring dataset "CO-FVG" {-}
+
+
+
+```{r include=FALSE}
+# hidden code chunk: listing .csv files available in  subdirectory
+# change of directory is valid only within this code chink
+getwd()
+setwd("./../../../_DATA")
+print ("Modified working directory")
+getwd()
+data_files = list.files(pattern = ".csv$", recursive = TRUE)
+data_files
+ 
+```
+
+
+This section is dedicated to load and preprocess financial statement data for the dataset *imprese-fvg*. 
+The relevant file is "_DATA/imprese-fvg/bilanci-fvg.csv".
+ 
+```{r}
+# load balance sheet data in a data.frame bsd = balance sheet data
+cols=rep(c("character"), times = 18)
+setwd("./../../../_DATA/infocamere")
+bsd <- read.csv("bilanci-fvg.csv", sep = ";", colClasses = cols)
+colnames(bsd)
+```
+There are 18 columns but in this project we will use only 4, namely "cf", "year", revenues" and "staff cost". Data should be loaded as string and then converted taking into account some issues with format of numerical variables. 
+
+```{r}
+bsd$year <- bsd$anno
+bsd$revenues <- bsd$Ricavi.delle.vendite
+bsd$staffcost <- bsd$Totale.Costi.del.Personale
+bsd <- subset(bsd, select = c(cf, year, revenues, staffcost ))
+summary(bsd)
+```
+To convert bsd$revenues and bsd$staffcost to numbers, we need to remove the "." used as thousand separators, and replace "," with "." as a decimal separator.
+
+```{r}
+bsd$revenues <- gsub('[.]', '', bsd$revenues)
+bsd$revenues <- gsub(',', '.',  bsd$revenues)
+bsd$revenues <- as.numeric(bsd$revenues)
+
+bsd$staffcost <- gsub('[.]', '', bsd$staffcost)
+bsd$staffcost <- gsub(',', '.',  bsd$staffcost)
+bsd$staffcost <- as.numeric(bsd$staffcost)
+
+```
+
+We will focus the analysis on a list of companies that are tenats at Area Science Park. The list is available in the file "data/imprese-fvg/area-tenants.csv" so we can load it in al list ("filter") and use it to subset *bsd*.
+
+```{r}
+setwd("./../../../_DATA/area-science-park")
+filter <- read.csv("area-tenants.csv", sep = ";")
+filter <- as.character(filter$CF)
+bsd <- subset(bsd, cf %in% filter)
+bsd <- subset(bsd, cf != "")
+summary(bsd)
+
+```
+The variable bsd$revenues spans from 0 to 1e9, so it is more convenient to work with log10
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+
+bsd$logrevenues <- log10(bsd$revenues)
+hist(bsd$revenues)
+hist(bsd$logrevenues)
+h1 <- ggplot(bsd, aes(x=revenues)) + geom_histogram(color="black", fill="red")
+h2 <- ggplot(bsd, aes(x=logrevenues)) + geom_histogram(color="black", fill="green", aes(y=..density..))+  geom_density(alpha=.2, fill="#FF6666") 
+figure <- ggarrange(h1, h2,labels = c("linear", "log"), ncol = 2, nrow = 1)
+figure
+
+```
+ 
