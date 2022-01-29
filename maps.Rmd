@@ -11,10 +11,15 @@ https://github.com/briatte/kmaps
 library(ggplot2)
 library(grid)
 library(rworldmap)
+library(rworldxtra)
 library(mapproj)
 
 # Get the world map
-worldMap <- getMap()
+#worldMap <- getMap()
+
+worldMap<-countriesHigh
+
+
 ```
  
 EU COUTRIES
@@ -26,6 +31,8 @@ europeanUnion <- c("Austria","Belgium","Bulgaria","Croatia","Cyprus",
                    "Lithuania","Luxembourg","Malta","Netherlands","Poland",
                    "Portugal","Romania","Slovakia","Slovenia","Spain",
                    "Sweden","United Kingdom")
+
+
 # Select only the index of states member of the E.U.
 indEU <- which(worldMap$NAME %in% europeanUnion)
 ```
@@ -47,8 +54,7 @@ europeCoords <- do.call("rbind", europeCoords)
 
 ```{r}
 # Add some data for each member
-value <- sample(x = seq(0,3,by = 0.1), size = length(europeanUnion),
-                replace = TRUE)
+value <- sample(x = seq(0,3,by = 0.1), size = length(europeanUnion),replace = TRUE)
 europeanUnionTable <- data.frame(country = europeanUnion, value = value)
 europeCoords$value <- europeanUnionTable$value[match(europeCoords$region,europeanUnionTable$country)]
 ```
@@ -59,7 +65,7 @@ europeCoords$value <- europeanUnionTable$value[match(europeCoords$region,europea
 # Plot the map
 P <- ggplot() + geom_polygon(data = europeCoords, aes(x = long, y = lat, group = region, fill = value),
                              colour = "black", size = 0.1) +
-  coord_map(xlim = c(-13, 35),  ylim = c(32, 71))
+  coord_map(xlim = c(-20, 35),  ylim = c(28, 71))
 
 P <- P + scale_fill_gradient(name = "Growth Rate", low = "#FF0000FF", high = "#FFFF00FF", na.value = "grey50")
 
@@ -70,7 +76,7 @@ P <- P + theme(#panel.grid.minor = element_line(colour = NA), panel.grid.minor =
                axis.text.y = element_blank(), axis.ticks.x = element_blank(),
                axis.ticks.y = element_blank(), axis.title = element_blank(),
                #rect = element_blank(),
-               plot.margin = unit(0 * c(-1.5, -1.5, -1.5, -1.5), "lines"))
+               plot.margin = unit(0 * c(-2, -2, -2, -2), "lines"))
 
 P <- P + scale_fill_gradient(name = "Growth Raten", low = "#FF0000FF", high = "#FFFF00FF", na.value = "grey50")
 

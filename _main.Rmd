@@ -1,0 +1,1152 @@
+--- 
+title: "Exploration of company information"
+author: "Fabio Morea"
+date: "`r Sys.Date()`"
+
+documentclass: scrbook
+output:
+  bookdown::pdf_book:
+    template: null
+
+site: bookdown::bookdown_site 
+
+bibliography: book.bib
+biblio-style: apalike
+link-citations: yes
+delete_merged_file: true
+---
+
+<!-- documentclass: scrbook -->
+<!-- output: -->
+<!--   bookdown::pdf_book: -->
+<!--     template: null -->
+ 
+<!-- documentclass: book -->
+<!-- output: -->
+<!--   bookdown::pdf_document2: default -->
+<!--   bookdown::gitbook: default -->
+<!-- site: bookdown::bookdown_site -->
+
+ <!-- output: -->
+ <!--  bookdown::pdf_book: -->
+ <!--    base_format: rticles::jss_article -->
+    
+# Scope and objectives  
+
+This notebook explores the datasets that will presumably underpin future research work for the PhD in Applied Data Science and Artificial Intelligence. 
+
+## Background information: 
+Research, innovation and highly skilled people are considered to be important factors in economic and social development. 
+Economic support policies often include funds to support research (for example with the creation of public research infrastructures), businesses (for example with tenders to co-finance innovative projects) and the training of people with the necessary skills.
+
+Area Science Park is a national research institution that manages a science and technology park located in Trieste (Italy). Its activities can be considered a public investment in support of research and innovation, for a value of approximately 20 million euros per year. 
+
+Currently Area is hosting 70 tenants (60 companies and 10 research centers) engaged in research activities in the fields of ICT, lifesceinces and materials. Their success (or lack of it) depends on a key - and often overlooked - asset: the community of over 1600 employees, researchers and entrepreneurs.  
+
+Area is interested in measuring the effectiveness and efficiency of its activities, focusing in particular on 
+
+- monitoring the economic performance of tenants,
+- monitoring the community of skilled workers,
+- comparing with similar groups, mainly at a regional or national scale, but also with respect to the science and technology parks in Austria and Slovenia.
+
+To support research work, Area Science Park can provide some relevant datasets, cureated as a part of the project [*innovation intelligence*](https://www.innovationintelligence.it/). Innovation Intelligence aims to analyze information on companies in the Friuli Venezia Giulia region, using several data sources such as the chamber of commerce, the Regional Labor Market Observatory, a rating agency, as well as surveys on samples of companies. 
+
+## Objectives of future research work - reserch questions
+Research questions are currently defined on a general level: 
+
+- are tenant companies performing better than similar companies?
+- how to measure similarity between two companies?
+- how to exthed such measure to groups of companies?
+- how to identify clusters or communities of companies? 
+
+
+## About this notebook 
+The notebook is divided in 6 sections: an introduction, a section for each dataset and a final section on potential future development.
+
+1. Imprese_FVG
+2. Bilanci_FVG
+3. Rating_FVG 
+4. CO_FVG
+5. Features: A basic example of sample feature selection, on a small subset, where each company is represented by 5 features 
+6. Further development: calculating the age of companies based on several dates, handling non metric features: defining a custimized similarity function to identify *similar* companies and estimate distances in a multi-dimensional space.
+
+
+The notebook has been  written using **R-Studio** and rendered with [**boowdown**](https://bookdown.org/) package. 
+The main libraries used for data manipulation are are *dplyr* [https://dplyr.tidyverse.org/] and *ggplot2* [https://ggplot2.tidyverse.org/] from the package *tidyverse* [https://www.tidyverse.org/]. A useful guide to tidverse is available online at the following address: [https://r4ds.had.co.nz/]
+
+> TODO Some parts of the notebook are higlighted as "To Do", to highlight potential improvements in analysis, code efficiency or need for further clarifications.
+
+ 
+
+
+<!--chapter:end:index.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Exploring dataset "impreseFVG" {-}
+ 
+
+```{r include=FALSE}
+# Local path, no need to display in knitted version
+path = './../../_DATA/imprese'
+library("tidyverse")
+```
+ 
+The dataset is organizes in a number of files; each file will be loaded in a different _data.frame_. 
+ 
+```{r}
+data.files <- list.files(path, pattern = ".csv$", recursive = TRUE)
+print(paste("dataset contains",length(data.files), "files:"))
+print(data.files)
+```
+## imprese
+The core data identifying companies can be found in *t_imprese.csv* . 
+```{r}
+imprese <- read.csv( paste0(path,"/t_imprese.csv"), sep = "|")
+str(imprese)
+ 
+```
+The attributes belong to different groups: 
+
+- *metadata*:ï..fonte, mm_aaaa: 
+- *identifier*: id_impresa,reg_imp_n, cf, piva, denominazione 
+- *address*:prov,sede_ul,n.albo_art,reg_imp_sez  
+- *type of company*: ng2
+- *active status*: stato_impresa  
+- *dates*:data_ini_at, data_cess_att, data_fall, data_liquid, data_cost, data_isc_ri, data_isc_rd,data_isc_aa,data_canc
+- *employees*:  addetti_aaaa, addetti_indip, addetti_dip  
+- *share capital*: capitale, capitale_valuta 
+- *other attributes*: imp_startup, imp_femminile, imp_giovanile, imp_straniera,  imp_pmi, imp_sedi_ee, imp_eefvg 
+
+```{r}
+imprese$stato_impresa <- as.factor(imprese$stato_impresa)
+df<-imprese %>% count(stato_impresa)  
+ggplot(data=df, aes(x=stato_impresa, y=n)) +   geom_bar(stat="identity") + coord_flip()
+imprese<- subset(imprese, stato_impresa =='ATTIVA')
+nrow(imprese)
+```
+## Metadata
+Metadata are generated by the pre-rpcessing algorithm and provide information about source and last update.
+The two attributes (ï..fonte, mm_aaaa) are not relevant at this stage. 
+
+## Identifiers
+The following attributes are relevant: 
+- denominazione: company name
+- cf ("codice fiscale"): unique identifier, as factor (11 numbers or a string of 16 lettersa nd numbers)
+- id_impresa: unique identifier, numeric.
+Id and cf are unique, while company names are not and there are no missing values.
+
+```{r}
+imprese$cf <- as.factor(imprese$cf)
+imprese$denominazione <- as.factor(imprese$denominazione)
+# check missing calues
+sum(is.na(imprese$denominazione)) + sum(is.na(imprese$cf)) == 0
+# check duplicates in cf
+length(unique(imprese$cf)) == length(imprese$cf)
+# check duplicates in denominazione
+uniqueNames <-length(unique(imprese$denominazione)) 
+allNames<-length(imprese$denominazione)
+print(paste("Company names are not a valid identifier for further analysis: the dataset contains", uniqueNames, "distinct names out of", allNames, "companies. There are", (allNames-uniqueNames), "duplicates."),quote = FALSE)
+
+```
+Other attributes (reg_imp_n,piva, n.albo_art,reg_imp_sez) are not relevant at this stage. 
+
+## location
+TODO
+prov: province (GO, TS, UD, PN) >> factor FVG / ITA / EU
+sede_ul: "SEDE" or "UL-n" >> factor SEDE = HeadOffice / UL = LocalUnit
+LucalUnit = numeric 0 for HeadOffice, otherwise n
+To be transformed in factors
+
+- *type of company*: ng2
+- *active status*: stato_impresa  
+- *dates*:data_ini_at, data_cess_att, data_fall, data_liquid, data_cost, data_isc_ri, data_isc_rd,data_isc_aa,data_canc
+- *employees*:  addetti_aaaa, addetti_indip, addetti_dip  
+- *share capital*: capitale, capitale_valuta 
+- *other attributes*: imp_startup, imp_femminile, imp_giovanile, imp_straniera,  imp_pmi, imp_sedi_ee, imp_eefvg 
+
+```{r}
+# company type: keep only the relevan ones for the scope of our research.
+types <- read.csv( paste0(path,"/d_ng.csv"), sep = "|")
+imprese$ng2           <- as.factor(imprese$ng2)
+names(types)<-c("ngGroup", "ng2", "ngDescription")
+
+df <- imprese  %>% count(ng2) 
+df <- df %>% inner_join(types)
+df <- df  %>% arrange(-n) %>% head(20)
+df$ngDescription <- factor(df$ngDescription, levels = df$ngDescription) #lock factors to keep the same order in the bar plot
+ggplot(data=df, aes(x=ngDescription, y=n)) +   geom_bar(stat="identity") + coord_flip()
+
+```
+Some company types are not relevant for our research, for example individual companies (DI) and other specified below. Dropping the corresponding dataframe rows drastically reduces the size of the data set
+```{r}
+notRelevant = c("DI", "AZ", "IR", "ER", "EP", "EN", "EM", "EL", "EE", "SM", "MA", "SZ", "LL", "AM", "AF")
+toBeRemoved<-which(imprese$ng2 %in% notRelevant)
+imprese2<-imprese[-toBeRemoved,]
+print(nrow(imprese2))
+
+df <- imprese2  %>% count(ng2) 
+print(paste("The dataset contains ", nrow(df), "types of companies."), quote=FALSE)
+df <- df %>% inner_join(types)
+df <- df  %>% arrange(-n) 
+df$ngDescription <- factor(df$ngDescription, levels = df$ngDescription) #lock factors to keep the same order in the bar plot
+ggplot(data=head(df, 10), aes(x=ngDescription, y=n))  + geom_bar(stat="identity", color = "black", fill = "lightblue") + coord_flip() + ggtitle("Most common types") + geom_text(aes(x=ngDescription, y=n, label = n, hjust = -.2), color = "black") + ylim(NA, 22000)
+
+```
+ 
+<!-- ''' -->
+<!--  ```{r} -->
+
+<!-- #check if names areunique -->
+
+
+<!-- imprese$prov          <- as.factor(imprese$prov) -->
+<!-- imprese$imp_pmi       <- as.factor(imprese$imp_pmi) -->
+<!-- imprese$imp_startup   <- as.factor(imprese$imp_startup) -->
+<!-- imprese$imp_giovanile <- as.factor(imprese$imp_giovanile) -->
+<!-- imprese$imp_femminile <- as.factor(imprese$imp_femminile) -->
+<!-- imprese$imp_straniera <- as.factor(imprese$imp_straniera) -->
+<!-- imprese$imp_sedi_ee   <- as.factor(imprese$imp_sedi_ee) -->
+
+<!-- ``` -->
+
+
+
+<!--  ```{r} -->
+<!-- imprese$data_cost   <- as.Date(imprese$data_cost) -->
+<!-- imprese$data_isc_aa <- as.Date(imprese$data_isc_aa) -->
+<!-- imprese$data_isc_rd <- as.Date(imprese$data_isc_rd) -->
+<!-- imprese$data_isc_ri <- as.Date(imprese$data_isc_ri) -->
+<!-- imprese$data_ini_at <- as.Date(imprese$data_ini_at) -->
+<!-- imprese$data_min    <- as.Date(imprese$data_isc_rd) -->
+
+<!-- ``` -->
+
+
+<!-- #imprese %>% mutate(data_min = coalesce(data_min, data_ini_at)) #verificare se funziona come previsto -->
+<!-- #imprese %>% mutate(data_min = coalesce(data_min,data_isc_aa)) -->
+<!-- #imprese %>% mutate(data_min = coalesce(data_min,data_isc_rd)) -->
+<!-- #imprese %>% mutate(data_min = coalesce(data_min,data_isc_ri)) -->
+
+<!--  ```{r} -->
+<!-- imprese$data_min <- as.Date(imprese$data_min) -->
+<!-- imprese <- imprese[!grepl('INATTIVA', imprese$stato_impresa),] -->
+
+<!-- imprese <- imprese[complete.cases(imprese$data_min), ] #elimina le righe con NA in data_min -->
+
+<!-- imprese$eta = as.numeric(as.Date("2022-01-01") - imprese$data_min) / 365  #calcola età -->
+<!-- imprese <- imprese[complete.cases(imprese$eta), ] -->
+<!-- eta <- imprese$eta -->
+
+
+<!-- ``` -->
+
+
+
+<!--  ```{r} -->
+<!-- boxplot(imprese$eta, imprese$imp_giovanile) -->
+<!-- ggplot(data=imprese, aes(x=eta, fill = imp_startup)) + geom_histogram(breaks=seq(0, 100, by=1)) -->
+<!-- ``` -->
+
+
+
+<!--  ```{r} -->
+<!-- ggplot(data=imprese, aes(x=eta, fill = imp_femminile)) + geom_histogram(breaks=seq(0, 100, by=5)) -->
+
+<!-- ``` -->
+
+
+<!--  ```{r} -->
+<!-- imprese2 <-subset(imprese,capitale_valuta == "EURO") -->
+<!-- imprese2 <-subset(imprese2,capitale < 1e6) -->
+<!-- imprese2 <-subset(imprese2,ng2 == "SP") -->
+
+
+<!-- boxplot(imprese2$capitale) -->
+<!-- qplot(imprese2$capitale, geom="histogram") -->
+<!-- ``` -->
+
+
+<!--  ```{r} -->
+
+
+<!-- imprese<- subset(imprese2, select = c('eta', 'cf', 'id_impresa') ) -->
+<!-- ids <- unique(imprese2$id_impresa) -->
+<!-- localiz <- read.csv("t_localizz.csv", sep = "|") -->
+<!-- localiz <- localiz[localiz$id_impresa %in% ids,] -->
+<!-- localiz <- subset(localiz, select = c('id_impresa', 'id_localiz')) -->
+<!-- locs <- unique(localiz$id_localiz) -->
+<!-- codici <- read.csv("t_codici.csv", sep = "|") -->
+<!-- codici <- codici[codici$id_localiz %in% locs,] -->
+<!-- codici <- subset(codici, select = c('id_localiz', 'ateco')) -->
+
+<!-- codici = merge(codici, localiz, by = "id_localiz") -->
+
+<!-- imp <- data.frame("company"=ids) -->
+<!-- imp$eta <- imprese$eta -->
+<!-- imp$ateco <- NA -->
+
+<!-- #aggiunge al data.frame una lista di codici ateco -->
+<!-- for (impresa in imp$company){ -->
+<!--         temp = as.list(subset(codici, id_impresa == impresa)) -->
+<!--         unique_nace_codes <- unique(temp$ateco) -->
+<!--         rownum = which(imp$company == impresa) -->
+<!--         imp$ateco[rownum] <- list(unique_nace_codes) -->
+<!-- } -->
+
+<!-- " -->
+<!-- '''" -->
+
+
+<!--chapter:end:01-imprese.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Exploring dataset "bilanciFVG" {-}
+
+
+
+
+```{r include=FALSE}
+# hidden code chunk: listing .csv files available in  subdirectory
+# change of directory is valid only within this code chink
+getwd()
+setwd("./../../../_DATA")
+print ("Modified working directory")
+getwd()
+data_files = list.files(pattern = ".csv$", recursive = TRUE)
+data_files
+ 
+```
+
+
+This section is dedicated to load and preprocess financial statement data for the dataset *imprese-fvg*. 
+The relevant file is "_DATA/imprese-fvg/bilanci-fvg.csv".
+ 
+```{r}
+# load balance sheet data in a data.frame bsd = balance sheet data
+cols=rep(c("character"), times = 18)
+setwd("./../../../_DATA/infocamere")
+bsd <- read.csv("bilanci-fvg.csv", sep = ";", colClasses = cols)
+colnames(bsd)
+```
+There are 18 columns but in this project we will use only 4, namely "cf", "year", revenues" and "staff cost". Data should be loaded as string and then converted taking into account some issues with format of numerical variables. 
+
+```{r}
+bsd$year <- bsd$anno
+bsd$revenues <- bsd$Ricavi.delle.vendite
+bsd$staffcost <- bsd$Totale.Costi.del.Personale
+bsd <- subset(bsd, select = c(cf, year, revenues, staffcost ))
+summary(bsd)
+```
+To convert bsd$revenues and bsd$staffcost to numbers, we need to remove the "." used as thousand separators, and replace "," with "." as a decimal separator.
+
+```{r}
+bsd$revenues <- gsub('[.]', '', bsd$revenues)
+bsd$revenues <- gsub(',', '.',  bsd$revenues)
+bsd$revenues <- as.numeric(bsd$revenues)
+
+bsd$staffcost <- gsub('[.]', '', bsd$staffcost)
+bsd$staffcost <- gsub(',', '.',  bsd$staffcost)
+bsd$staffcost <- as.numeric(bsd$staffcost)
+
+```
+
+We will focus the analysis on a list of companies that are tenats at Area Science Park. The list is available in the file "data/imprese-fvg/area-tenants.csv" so we can load it in al list ("filter") and use it to subset *bsd*.
+
+```{r}
+setwd("./../../../_DATA/area-science-park")
+filter <- read.csv("area-tenants.csv", sep = ";")
+filter <- as.character(filter$CF)
+bsd <- subset(bsd, cf %in% filter)
+bsd <- subset(bsd, cf != "")
+summary(bsd)
+
+```
+The variable bsd$revenues spans from 0 to 1e9, so it is more convenient to work with log10
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+
+bsd$logrevenues <- log10(bsd$revenues)
+hist(bsd$revenues)
+hist(bsd$logrevenues)
+h1 <- ggplot(bsd, aes(x=revenues)) + geom_histogram(color="black", fill="red")
+h2 <- ggplot(bsd, aes(x=logrevenues)) + geom_histogram(color="black", fill="green", aes(y=..density..))+  geom_density(alpha=.2, fill="#FF6666") 
+figure <- ggarrange(h1, h2,labels = c("linear", "log"), ncol = 2, nrow = 1)
+figure
+
+```
+ 
+
+<!--chapter:end:02-bilanci.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Exploring dataset "ratingFVG" {-}
+ 
+
+
+```{r include=FALSE}
+# hidden code chunk: listing .csv files available in  subdirectory
+# change of directory is valid only within this code chink
+getwd()
+setwd("./../../../_DATA")
+print ("Modified working directory")
+getwd()
+data_files = list.files(pattern = ".csv$", recursive = TRUE)
+data_files
+ 
+```
+
+
+This section is dedicated to load and preprocess financial statement data for the dataset *imprese-fvg*. 
+The relevant file is "_DATA/imprese-fvg/bilanci-fvg.csv".
+ 
+```{r}
+# load balance sheet data in a data.frame bsd = balance sheet data
+cols=rep(c("character"), times = 18)
+setwd("./../../../_DATA/infocamere")
+bsd <- read.csv("bilanci-fvg.csv", sep = ";", colClasses = cols)
+colnames(bsd)
+```
+There are 18 columns but in this project we will use only 4, namely "cf", "year", revenues" and "staff cost". Data should be loaded as string and then converted taking into account some issues with format of numerical variables. 
+
+```{r}
+bsd$year <- bsd$anno
+bsd$revenues <- bsd$Ricavi.delle.vendite
+bsd$staffcost <- bsd$Totale.Costi.del.Personale
+bsd <- subset(bsd, select = c(cf, year, revenues, staffcost ))
+summary(bsd)
+```
+To convert bsd$revenues and bsd$staffcost to numbers, we need to remove the "." used as thousand separators, and replace "," with "." as a decimal separator.
+
+```{r}
+bsd$revenues <- gsub('[.]', '', bsd$revenues)
+bsd$revenues <- gsub(',', '.',  bsd$revenues)
+bsd$revenues <- as.numeric(bsd$revenues)
+
+bsd$staffcost <- gsub('[.]', '', bsd$staffcost)
+bsd$staffcost <- gsub(',', '.',  bsd$staffcost)
+bsd$staffcost <- as.numeric(bsd$staffcost)
+
+```
+
+We will focus the analysis on a list of companies that are tenats at Area Science Park. The list is available in the file "data/imprese-fvg/area-tenants.csv" so we can load it in al list ("filter") and use it to subset *bsd*.
+
+```{r}
+setwd("./../../../_DATA/area-science-park")
+filter <- read.csv("area-tenants.csv", sep = ";")
+filter <- as.character(filter$CF)
+bsd <- subset(bsd, cf %in% filter)
+bsd <- subset(bsd, cf != "")
+summary(bsd)
+
+```
+The variable bsd$revenues spans from 0 to 1e9, so it is more convenient to work with log10
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+
+bsd$logrevenues <- log10(bsd$revenues)
+hist(bsd$revenues)
+hist(bsd$logrevenues)
+h1 <- ggplot(bsd, aes(x=revenues)) + geom_histogram(color="black", fill="red")
+h2 <- ggplot(bsd, aes(x=logrevenues)) + geom_histogram(color="black", fill="green", aes(y=..density..))+  geom_density(alpha=.2, fill="#FF6666") 
+figure <- ggarrange(h1, h2,labels = c("linear", "log"), ncol = 2, nrow = 1)
+figure
+
+```
+ 
+
+<!--chapter:end:03-rating.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Exploring dataset "CO-FVG" {-}
+
+
+
+```{r include=FALSE}
+# hidden code chunk: listing .csv files available in  subdirectory
+# change of directory is valid only within this code chink
+getwd()
+setwd("./../../../_DATA")
+print ("Modified working directory")
+getwd()
+data_files = list.files(pattern = ".csv$", recursive = TRUE)
+data_files
+ 
+```
+
+
+This section is dedicated to load and preprocess financial statement data for the dataset *imprese-fvg*. 
+The relevant file is "_DATA/imprese-fvg/bilanci-fvg.csv".
+ 
+```{r}
+# load balance sheet data in a data.frame bsd = balance sheet data
+cols=rep(c("character"), times = 18)
+setwd("./../../../_DATA/infocamere")
+bsd <- read.csv("bilanci-fvg.csv", sep = ";", colClasses = cols)
+colnames(bsd)
+```
+There are 18 columns but in this project we will use only 4, namely "cf", "year", revenues" and "staff cost". Data should be loaded as string and then converted taking into account some issues with format of numerical variables. 
+
+```{r}
+bsd$year <- bsd$anno
+bsd$revenues <- bsd$Ricavi.delle.vendite
+bsd$staffcost <- bsd$Totale.Costi.del.Personale
+bsd <- subset(bsd, select = c(cf, year, revenues, staffcost ))
+summary(bsd)
+```
+To convert bsd$revenues and bsd$staffcost to numbers, we need to remove the "." used as thousand separators, and replace "," with "." as a decimal separator.
+
+```{r}
+bsd$revenues <- gsub('[.]', '', bsd$revenues)
+bsd$revenues <- gsub(',', '.',  bsd$revenues)
+bsd$revenues <- as.numeric(bsd$revenues)
+
+bsd$staffcost <- gsub('[.]', '', bsd$staffcost)
+bsd$staffcost <- gsub(',', '.',  bsd$staffcost)
+bsd$staffcost <- as.numeric(bsd$staffcost)
+
+```
+
+We will focus the analysis on a list of companies that are tenats at Area Science Park. The list is available in the file "data/imprese-fvg/area-tenants.csv" so we can load it in al list ("filter") and use it to subset *bsd*.
+
+```{r}
+setwd("./../../../_DATA/area-science-park")
+filter <- read.csv("area-tenants.csv", sep = ";")
+filter <- as.character(filter$CF)
+bsd <- subset(bsd, cf %in% filter)
+bsd <- subset(bsd, cf != "")
+summary(bsd)
+
+```
+The variable bsd$revenues spans from 0 to 1e9, so it is more convenient to work with log10
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+
+bsd$logrevenues <- log10(bsd$revenues)
+hist(bsd$revenues)
+hist(bsd$logrevenues)
+h1 <- ggplot(bsd, aes(x=revenues)) + geom_histogram(color="black", fill="red")
+h2 <- ggplot(bsd, aes(x=logrevenues)) + geom_histogram(color="black", fill="green", aes(y=..density..))+  geom_density(alpha=.2, fill="#FF6666") 
+figure <- ggarrange(h1, h2,labels = c("linear", "log"), ncol = 2, nrow = 1)
+figure
+
+```
+ 
+
+<!--chapter:end:04-CO.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# introduction {-}
+This section explores several options to represent companies as vectors in a multidimensional space. As a basic excercise, we are working on a toy dataset, where each company is represented by 5 features, so a company is represented by 
+the vector $X_i \in R^n$. 
+
+TO DO:... using both metric and non-metric features.
+1. similarities based on metric features
+2. a non-metric similarity function
+3. similarity using metric and non metric features
+4. plotting pairs of features
+5. multidimensional scaling
+
+## similarities based on metric features {-}
+We start by creating a toy dataset of four companies, represented by their name and 5 features: age, activity code, turnover, staff count, startup.
+Activity code is a non-metric feature, coded according to *Statistical Classification of Economic Activities in the European Community*, commonly referred to as NACE (for the French term "nomenclature statistique des activités économiques dans la Communauté européenne"), is the industry standard classification system used in the European Union.  More about NACE activity codes: https://en.wikipedia.org/wiki/Statistical_Classification_of_Economic_Activities_in_the_European_Community
+
+
+```{r}
+companies <-data.frame(name=character(), age = numeric(), nace=character(), turnover = numeric(), staffcount=numeric(), startup=character(), stringsAsFactors = FALSE)
+companies[1, ] <- list("company-A", 10.2, "10.20.30", 1200000, 150, "no")
+companies[2, ] <- list("company-B", 44.0, "10.20.99", 3050000, 94,  "no")    
+companies[3, ] <- list("company-C",  3.3, "20.55",    188000,  10,  "startup")    
+companies[4, ] <- list("company-D",  2.1, "40", 99000,   30,  "startup")    
+#companies <- rbind(companies, newrow)
+
+companies$startup <-factor(companies$startup)
+summary(companies)
+
+#TODO add latitude, longitude and calculate distances https://eurekastatistics.com/calculating-a-distance-matrix-for-geographic-points-using-r/
+
+#TODO improve data exploration: https://datacarpentry.org/genomics-r-intro/03-basics-factors-dataframes/index.html
+
+```
+```{r include=FALSE}
+print("Hello")
+
+```
+
+
+We can calculate a distance matrix using metric features. For a single variable, the distance is simply the difference between values. Here is is formatted as a matrix of pairwise distnes, that will be useful later.
+
+```{r} 
+distance1 <- function(X){
+  nn=length(X)
+  result <- matrix(ncol=nn, nrow=nn)
+  for (i in 1:nn){
+    for (j in 1:nn){
+      if (i==j)     {result[i,j]<-0}
+      else if (i>j) {result[i,j]<-result[j,i]}
+      else {
+        result[i,j] = X[i] - X[j]
+      }  
+    }
+  }
+  return(result)
+}
+
+agedist <- distance1(companies$age)
+trndist <- distance1(companies$turnover)
+stfdist <- distance1(companies$staffcount)
+
+
+```
+
+We can represent each company as a vector whose coordinates are its numerical features, combined in a matrix. 
+In this form, the euclidean distance can be calculated as above with two nested for loops using $d = \sqrt{\sum{(x_i-x_j)^2}}$ or, more efficiently, with dist() function. Note that dist() returns an object of class "dist", that can be dispayed as triangular matrix (see: https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/dist)
+ 
+```{r}
+X <- cbind( companies$age, companies$turnover, companies$staffcount)
+
+distance2 <- function(X){
+  nn=nrow(X)
+  result <- matrix(ncol=nn, nrow=nn)
+  for (i in 1:nn){
+    for (j in 1:nn){
+      if (i==j)     {result[i,j]<-0}
+      else if (i>j) {result[i,j]<-result[j,i]}
+      else {
+        result[i,j] = sqrt(sum( (X[i,] - X[j,])^2) )
+      }  
+    }
+  }
+  return(result)
+}
+
+d_loops = distance2(X)
+d_func = dist(X)
+print(d_loops)
+print(d_func)
+```
+
+If we are interested in similarities (not absolute values), the distance can be calculated using data normalized to zero mean and unit variance.
+```{r}
+#usung scale() function
+scaled1 <- scale(X, center = TRUE, scale = TRUE)
+
+#center and scale by row
+x1<-(companies$age - mean(companies$age)) / sd(companies$age)
+x2<-(companies$turnover - mean(companies$turnover)) / sd(companies$turnover)
+x3<-(companies$staffcount - mean(companies$staffcount)) / sd(companies$staffcount)
+scaled2 <- cbind( x1,x2,x3)
+
+print(scaled1)
+print(scaled2)
+
+d_scaled = dist(scaled1)
+print(d_scaled)
+
+```
+In this case the distances identifies the most "similar" companies, 3 and 4
+
+If we want to add non-metric features, we need to define a pairwise ditance function and use the overall distance as follows: 
+
+```{r}
+data <- companies
+data$age        <-(companies$age - mean(companies$age)) / sd(companies$age)
+data$turnover   <-(companies$turnover - mean(companies$turnover)) / sd(companies$turnover)
+data$staffcount <-(companies$staffcount - mean(companies$staffcount)) / sd(companies$staffcount)
+
+
+
+
+nace_distance <- function(nace1, nace2, d=0){
+  
+  ln1=length(nace1)
+  ln2=length(nace2)
+  
+  w = c(0.25,0.15,0.1)#pesi da assegnare alle distanze a seconda della profondità dell'albero
+  
+  if (ln1 == ln2){
+    if (identical (nace1, nace2)){
+      return(d)
+    }else{
+      return (nace_distance (head(nace1,-1), head(nace2, -1), d+2*w[ln1]))
+    }    
+    
+  }else{
+    if (ln1 > ln2){
+      return (nace_distance (head(nace1, -1), nace2, d+w[ln1]))
+    }else{
+      return (nace_distance (nace1, head(nace2, -1), d+w[ln2]))
+    }  
+  }
+}
+
+
+
+
+distance3 <- function(X){
+  #asuming that features 2, 4 and 5 are numeric, and feature 3 is a nace-code
+  nn=nrow(X)
+  result <- matrix(ncol=nn, nrow=nn)
+  for (i in 1:nn){
+    for (j in 1:nn){
+      if (i==j)     {result[i,j]<-0}
+      else if (i>j) {result[i,j]<-result[j,i]}
+      else {
+        d1 = X[i,2] - X[j,2]
+        d2 = X[i,4] - X[j,4]
+        d3 = X[i,5] - X[j,5]
+        d4 = nace_distance(X[i,3] , X[j,3])
+        result[i,j] = sqrt(d1^2+d2^2+d3^2+d4^2)
+      }  
+    }
+  }
+  return(result)
+}
+
+d_nm = distance3(data)
+
+d_nm
+
+#print( nace_distance("44.11.22", "44.55.66", d=0) )
+
+
+
+
+```
+
+Now we have a 4-dimensional distance, that can be plotted with pairplots or reduced to a 2 dimensional distance using MDS. 
+
+```{r}
+#library(ggplot2)
+#heatmap(d_nm)
+```
+
+
+
+A similarity function to compare two nace codes can be defined as follows
+  s<-0 if codes belong to different macrosectors
+  s<-1 if codes are identical
+  s reduced by .1 for each difference in third level
+  s reduced by .2 for each difference in second level
+  
+
+
+```{r}
+
+similar_nace <- function(c1, c2, s=1,w = c(0.0, 0.25,0.125)){
+  print(paste("Comparing codes ", nace1, " and ", nace2, "current similarity ", s))
+
+  if ( head(c1, 1) != head(c2, 1) ){
+    print("codes belong to different macrosectors, s<-0")
+    return(0.0)
+  }
+  if (identical (c1, c2)){
+    print("codes are identical")
+    return(s)
+  }
+      
+  
+  while (!(identical (c1, c2))){
+    ln1=length(c1)
+    ln2=length(c2)
+    print(paste("now checking ", ln1, ln2,  " current similarity ", s))
+ 
+    if (ln1>=ln2){
+      c1 = head(c1,-1)
+      s <- s - w[ln1]
+    }
+    if (ln2>=ln1){
+      c2 = head(c2,-1)
+      s <- s - w[ln2]
+    }
+
+  }
+  print(paste("End: similarity <-", s))
+  return(s) 
+}
+
+splitnace <- function(nace){
+  if (length(nace) == 0 ){
+    print('some issues with nace code!')
+    print(nace)
+    return(c("00.00.00"))}
+  
+  result = strsplit(nace,".",fixed = TRUE)
+  return(result)
+}
+
+
+nace1 = "24.30.44"
+nace2 = "24.40.43"
+c1<-unlist(splitnace(nace1))
+c2<-unlist(splitnace(nace2))
+
+
+sim = similar_nace(c1,c2)
+
+dist = 1-sim
+print(sim)
+
+
+```
+## custimized distances {-}
+note that similar_nace() allows for customized distance s = 1 and weights w()
+but sets default values s=1, w=c(...)
+
+```{r}
+sim = similar_nace(c1,c2,s=5, w=c(1,1,1))
+
+```
+
+
+
+Note that NACE codes datasets may contain non valid codes. The following functions replaces them with a code that generates similarity <-0
+
+check_nace <- function(nace_code){
+  if (length(nace_code) == 0 ){
+    print(paste("NACE code ", nace_code, "has length zero. replaced by 00.00.00"))
+    return(c("00.00.00"))}
+
+```{r}
+
+```
+
+
+
+  
+```{r}
+#TODO proseguire caricando il dataset completo e calcolando la matrice di tutte le distanze
+
+pairwise_distance <- function(id_imp_1, id_imp_2, imp){#imp è il dataset completo delle imprese
+        naces_imp_1 <- unlist(imp[id_imp_1, 3], recursive = TRUE)
+        naces_imp_2 <- unlist(imp[id_imp_2, 3], recursive = TRUE)
+        print('##')
+        print(id_imp_1)
+        print(id_imp_2)
+        print(naces_imp_1)
+        print(naces_imp_2)
+        dist_list <-0
+        l1 <-  length(naces_imp_1)
+        l2 <-  length(naces_imp_2)
+        for (ci in 1:l1){
+                for (cj in 1:l2){
+                        n1 = unlist(splitnace(naces_imp_1[ci]))
+                        n2 = unlist(splitnace(naces_imp_2[cj]))
+                        print(n1)
+                        print(n2)
+                        
+                        d = 1- similar_nace(n1, n2, 1)
+                        dist_list <- c(dist_list, d)
+
+                        print(dist_list)
+
+                 }
+        }
+        return(dist_list)
+}
+
+
+```
+
+
+<!--chapter:end:05-features.Rmd-->
+
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Further development {-}
+
+## distance
+## A similarity function between companies based on NACE codes 
+
+```{r}
+
+splitnace <- function(nace){
+  if (length(nace) == 0 ){
+    #print('some issues with nace code!')
+    #print(nace)
+    return(c("00.00.00"))}
+  result = strsplit(nace,"[.]",fixed = TRUE)
+  return(result)
+}
+
+distance <- function(nace1, nace2, d=0){
+  ln1=length(nace1)
+  ln2=length(nace2)
+  
+  w = c(0.25,0.15,0.1)
+  #pesi da assegnare alle distanze a seconda della profondità dell'albero
+  #TODO rivedere i pesi: se appartengono a due macrosettori diversi il peso è 1
+  # e a quel punto se d>=1 puoi uscire
+  
+  if (ln1 == ln2){
+    if (identical (nace1, nace2)){
+      return(min(d,1))
+    }else{
+      return (distance (head(nace1,-1), head(nace2, -1), d+2*w[ln1]))
+    }    
+    
+  }else{
+    if (ln1 > ln2){
+      return (distance (head(nace1, -1), nace2, d+w[ln1]))
+    }else{
+      return (distance (nace1, head(nace2, -1), d+w[ln2]))
+    }  
+  }
+}
+
+
+pairwise_distance <- function(id_imp_1, id_imp_2, imp){
+        naces_imp_1 <- unlist(imp[id_imp_1, 3], recursive = TRUE)
+        naces_imp_2 <- unlist(imp[id_imp_2, 3], recursive = TRUE)
+        #print('##')
+        #print(id_imp_1)
+        #print(id_imp_2)
+        #print(naces_imp_1)
+        #print(naces_imp_2)
+        dist_list <-0
+        l1 <-  length(naces_imp_1)
+        l2 <-  length(naces_imp_2)
+        for (ci in 1:l1){
+                for (cj in 1:l2){
+                        n1 = unlist(splitnace(naces_imp_1[ci]))
+                        n2 = unlist(splitnace(naces_imp_2[cj]))
+                        #print(n1)
+                        #print(n2)
+                        
+                        d = distance(n1, n2, 0)
+                        dist_list <- c(dist_list, d)
+
+                        #print(dist_list)
+
+                 }
+        }
+        return(dist_list)
+}
+
+
+dd <- pairwise_distance(which(imp$company == 1020), which(imp$company == 1036), imp)
+mean(dd)
+
+
+#TODO: nest into a loop to scan pairwise distances between companies
+someids=ids[1:20]
+
+distances<-c(0)
+for (id in someids){
+        #print('*******************new id**')
+        #print(id)
+        distances <- c(distances, mean(pairwise_distance(
+                        which(imp$company == 222), 
+                        which(imp$company == id),
+                        imp)))
+}
+
+for (k in 1:20){
+  neibs = order(distances)[1:k]
+  dist_neibs = mean(distances[neibs])
+  print(dist_neibs)# mean distance of k nearest neighbours
+}
+boxplot(distances)
+
+library(ggplot2)
+qplot(distances, geom="histogram", binwidth=.005)
+
+```
+
+##other
+
+
+
+```{r include=FALSE}
+# hidden code chunk: listing .csv files available in  subdirectory
+# change of directory is valid only within this code chink
+getwd()
+setwd("./../../../_DATA")
+print ("Modified working directory")
+getwd()
+data_files = list.files(pattern = ".csv$", recursive = TRUE)
+data_files
+ 
+```
+
+
+This section is dedicated to load and preprocess financial statement data for the dataset *imprese-fvg*. 
+The relevant file is "_DATA/imprese-fvg/bilanci-fvg.csv".
+ 
+```{r}
+# load balance sheet data in a data.frame bsd = balance sheet data
+cols=rep(c("character"), times = 18)
+setwd("./../../../_DATA/infocamere")
+bsd <- read.csv("bilanci-fvg.csv", sep = ";", colClasses = cols)
+colnames(bsd)
+```
+There are 18 columns but in this project we will use only 4, namely "cf", "year", revenues" and "staff cost". Data should be loaded as string and then converted taking into account some issues with format of numerical variables. 
+
+```{r}
+bsd$year <- bsd$anno
+bsd$revenues <- bsd$Ricavi.delle.vendite
+bsd$staffcost <- bsd$Totale.Costi.del.Personale
+bsd <- subset(bsd, select = c(cf, year, revenues, staffcost ))
+summary(bsd)
+```
+To convert bsd$revenues and bsd$staffcost to numbers, we need to remove the "." used as thousand separators, and replace "," with "." as a decimal separator.
+
+```{r}
+bsd$revenues <- gsub('[.]', '', bsd$revenues)
+bsd$revenues <- gsub(',', '.',  bsd$revenues)
+bsd$revenues <- as.numeric(bsd$revenues)
+
+bsd$staffcost <- gsub('[.]', '', bsd$staffcost)
+bsd$staffcost <- gsub(',', '.',  bsd$staffcost)
+bsd$staffcost <- as.numeric(bsd$staffcost)
+
+```
+
+We will focus the analysis on a list of companies that are tenats at Area Science Park. The list is available in the file "data/imprese-fvg/area-tenants.csv" so we can load it in al list ("filter") and use it to subset *bsd*.
+
+```{r}
+setwd("./../../../_DATA/area-science-park")
+filter <- read.csv("area-tenants.csv", sep = ";")
+filter <- as.character(filter$CF)
+bsd <- subset(bsd, cf %in% filter)
+bsd <- subset(bsd, cf != "")
+summary(bsd)
+
+```
+The variable bsd$revenues spans from 0 to 1e9, so it is more convenient to work with log10
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+
+bsd$logrevenues <- log10(bsd$revenues)
+hist(bsd$revenues)
+hist(bsd$logrevenues)
+h1 <- ggplot(bsd, aes(x=revenues)) + geom_histogram(color="black", fill="red")
+h2 <- ggplot(bsd, aes(x=logrevenues)) + geom_histogram(color="black", fill="green", aes(y=..density..))+  geom_density(alpha=.2, fill="#FF6666") 
+figure <- ggarrange(h1, h2,labels = c("linear", "log"), ncol = 2, nrow = 1)
+figure
+
+```
+ 
+
+<!--chapter:end:06-further-development.Rmd-->
+
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an example of maps using R
+https://egallic.fr/en/european-map-using-r/
+https://github.com/briatte/kmaps 
+
+```{r}
+library(ggplot2)
+library(grid)
+library(rworldmap)
+library(rworldxtra)
+library(mapproj)
+
+# Get the world map
+#worldMap <- getMap()
+
+worldMap<-countriesHigh
+
+
+```
+ 
+EU COUTRIES
+```{r}
+# Member States of the European Union
+europeanUnion <- c("Austria","Belgium","Bulgaria","Croatia","Cyprus",
+                   "Czech Rep.","Denmark","Estonia","Finland","France",
+                   "Germany","Greece","Hungary","Ireland","Italy","Latvia",
+                   "Lithuania","Luxembourg","Malta","Netherlands","Poland",
+                   "Portugal","Romania","Slovakia","Slovenia","Spain",
+                   "Sweden","United Kingdom")
+
+
+# Select only the index of states member of the E.U.
+indEU <- which(worldMap$NAME %in% europeanUnion)
+```
+
+EXTRACT COORDINATES
+
+```{r}
+# Extract longitude and latitude border's coordinates of members states of E.U. 
+europeCoords <- lapply(indEU, function(i){
+  df <- data.frame(worldMap@polygons[[i]]@Polygons[[1]]@coords)
+  df$region =as.character(worldMap$NAME[i])
+  colnames(df) <- list("long", "lat", "region")
+  return(df)
+})
+
+europeCoords <- do.call("rbind", europeCoords)
+```
+
+
+```{r}
+# Add some data for each member
+value <- sample(x = seq(0,3,by = 0.1), size = length(europeanUnion),replace = TRUE)
+europeanUnionTable <- data.frame(country = europeanUnion, value = value)
+europeCoords$value <- europeanUnionTable$value[match(europeCoords$region,europeanUnionTable$country)]
+```
+
+
+
+```{r}
+# Plot the map
+P <- ggplot() + geom_polygon(data = europeCoords, aes(x = long, y = lat, group = region, fill = value),
+                             colour = "black", size = 0.1) +
+  coord_map(xlim = c(-20, 35),  ylim = c(28, 71))
+
+P <- P + scale_fill_gradient(name = "Growth Rate", low = "#FF0000FF", high = "#FFFF00FF", na.value = "grey50")
+
+
+P <- P + theme(#panel.grid.minor = element_line(colour = NA), panel.grid.minor = element_line(colour = NA),
+               #panel.background = element_rect(fill = NA, colour = NA),
+               axis.text.x = element_blank(),
+               axis.text.y = element_blank(), axis.ticks.x = element_blank(),
+               axis.ticks.y = element_blank(), axis.title = element_blank(),
+               #rect = element_blank(),
+               plot.margin = unit(0 * c(-2, -2, -2, -2), "lines"))
+
+P <- P + scale_fill_gradient(name = "Growth Raten", low = "#FF0000FF", high = "#FFFF00FF", na.value = "grey50")
+
+P
+
+```
+
+
+<!--chapter:end:maps.Rmd-->
+
