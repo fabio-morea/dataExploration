@@ -1,0 +1,318 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# A similarity function
+This section explores several options to represent companies as vectors in a multidimensional space. As a basic excercise, we are working on a toy dataset, where each company is represented by 5 features, so a company is represented by 
+the vector $X_i \in R^n$. 
+
+TO DO:... using both metric and non-metric features.
+1. similarities based on metric features
+2. a non-metric similarity function
+3. similarity using metric and non metric features
+4. plotting pairs of features
+5. multidimensional scaling
+
+## similarities based on metric features {-}
+We start by creating a toy dataset of four companies, represented by their name and 5 features: age, activity code, turnover, staff count, startup.
+Activity code is a non-metric feature, coded according to *Statistical Classification of Economic Activities in the European Community*, commonly referred to as NACE (for the French term "nomenclature statistique des activités économiques dans la Communauté européenne"), is the industry standard classification system used in the European Union.  More about NACE activity codes: https://en.wikipedia.org/wiki/Statistical_Classification_of_Economic_Activities_in_the_European_Community
+
+
+```{r}
+companies <-data.frame(name=character(), age = numeric(), nace=character(), turnover = numeric(), staffcount=numeric(), startup=character(), stringsAsFactors = FALSE)
+companies[1, ] <- list("company-A", 10.2, "10.20.30", 1200000, 150, "no")
+companies[2, ] <- list("company-B", 44.0, "10.20.99", 3050000, 94,  "no")    
+companies[3, ] <- list("company-C",  3.3, "20.55",    188000,  10,  "startup")    
+companies[4, ] <- list("company-D",  2.1, "40", 99000,   30,  "startup")    
+#companies <- rbind(companies, newrow)
+
+companies$startup <-factor(companies$startup)
+summary(companies)
+
+#TODO add latitude, longitude and calculate distances https://eurekastatistics.com/calculating-a-distance-matrix-for-geographic-points-using-r/
+
+#TODO improve data exploration: https://datacarpentry.org/genomics-r-intro/03-basics-factors-dataframes/index.html
+
+```
+```{r include=FALSE}
+print("Hello")
+
+```
+
+
+We can calculate a distance matrix using metric features. For a single variable, the distance is simply the difference between values. Here is is formatted as a matrix of pairwise distnes, that will be useful later.
+
+```{r} 
+distance1 <- function(X){
+  nn=length(X)
+  result <- matrix(ncol=nn, nrow=nn)
+  for (i in 1:nn){
+    for (j in 1:nn){
+      if (i==j)     {result[i,j]<-0}
+      else if (i>j) {result[i,j]<-result[j,i]}
+      else {
+        result[i,j] = X[i] - X[j]
+      }  
+    }
+  }
+  return(result)
+}
+
+agedist <- distance1(companies$age)
+trndist <- distance1(companies$turnover)
+stfdist <- distance1(companies$staffcount)
+
+
+```
+
+We can represent each company as a vector whose coordinates are its numerical features, combined in a matrix. 
+In this form, the euclidean distance can be calculated as above with two nested for loops using $d = \sqrt{\sum{(x_i-x_j)^2}}$ or, more efficiently, with dist() function. Note that dist() returns an object of class "dist", that can be dispayed as triangular matrix (see: https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/dist)
+ 
+```{r}
+X <- cbind( companies$age, companies$turnover, companies$staffcount)
+
+distance2 <- function(X){
+  nn=nrow(X)
+  result <- matrix(ncol=nn, nrow=nn)
+  for (i in 1:nn){
+    for (j in 1:nn){
+      if (i==j)     {result[i,j]<-0}
+      else if (i>j) {result[i,j]<-result[j,i]}
+      else {
+        result[i,j] = sqrt(sum( (X[i,] - X[j,])^2) )
+      }  
+    }
+  }
+  return(result)
+}
+
+d_loops = distance2(X)
+d_func = dist(X)
+print(d_loops)
+print(d_func)
+```
+
+If we are interested in similarities (not absolute values), the distance can be calculated using data normalized to zero mean and unit variance.
+```{r}
+#usung scale() function
+scaled1 <- scale(X, center = TRUE, scale = TRUE)
+
+#center and scale by row
+x1<-(companies$age - mean(companies$age)) / sd(companies$age)
+x2<-(companies$turnover - mean(companies$turnover)) / sd(companies$turnover)
+x3<-(companies$staffcount - mean(companies$staffcount)) / sd(companies$staffcount)
+scaled2 <- cbind( x1,x2,x3)
+
+print(scaled1)
+print(scaled2)
+
+d_scaled = dist(scaled1)
+print(d_scaled)
+
+```
+In this case the distances identifies the most "similar" companies, 3 and 4
+
+If we want to add non-metric features, we need to define a pairwise ditance function and use the overall distance as follows: 
+
+```{r}
+data <- companies
+data$age        <-(companies$age - mean(companies$age)) / sd(companies$age)
+data$turnover   <-(companies$turnover - mean(companies$turnover)) / sd(companies$turnover)
+data$staffcount <-(companies$staffcount - mean(companies$staffcount)) / sd(companies$staffcount)
+
+
+
+
+nace_distance <- function(nace1, nace2, d=0){
+  
+  ln1=length(nace1)
+  ln2=length(nace2)
+  
+  w = c(0.25,0.15,0.1)#pesi da assegnare alle distanze a seconda della profondità dell'albero
+  
+  if (ln1 == ln2){
+    if (identical (nace1, nace2)){
+      return(d)
+    }else{
+      return (nace_distance (head(nace1,-1), head(nace2, -1), d+2*w[ln1]))
+    }    
+    
+  }else{
+    if (ln1 > ln2){
+      return (nace_distance (head(nace1, -1), nace2, d+w[ln1]))
+    }else{
+      return (nace_distance (nace1, head(nace2, -1), d+w[ln2]))
+    }  
+  }
+}
+
+
+
+
+distance3 <- function(X){
+  #asuming that features 2, 4 and 5 are numeric, and feature 3 is a nace-code
+  nn=nrow(X)
+  result <- matrix(ncol=nn, nrow=nn)
+  for (i in 1:nn){
+    for (j in 1:nn){
+      if (i==j)     {result[i,j]<-0}
+      else if (i>j) {result[i,j]<-result[j,i]}
+      else {
+        d1 = X[i,2] - X[j,2]
+        d2 = X[i,4] - X[j,4]
+        d3 = X[i,5] - X[j,5]
+        d4 = nace_distance(X[i,3] , X[j,3])
+        result[i,j] = sqrt(d1^2+d2^2+d3^2+d4^2)
+      }  
+    }
+  }
+  return(result)
+}
+
+d_nm = distance3(data)
+
+d_nm
+
+#print( nace_distance("44.11.22", "44.55.66", d=0) )
+
+
+
+
+```
+
+Now we have a 4-dimensional distance, that can be plotted with pairplots or reduced to a 2 dimensional distance using MDS. 
+
+```{r}
+#library(ggplot2)
+#heatmap(d_nm)
+```
+
+
+
+A similarity function to compare two nace codes can be defined as follows
+  s<-0 if codes belong to different macrosectors
+  s<-1 if codes are identical
+  s reduced by .1 for each difference in third level
+  s reduced by .2 for each difference in second level
+  
+
+
+```{r}
+
+similar_nace <- function(c1, c2, s=1,w = c(0.0, 0.25,0.125)){
+  print(paste("Comparing codes ", nace1, " and ", nace2, "current similarity ", s))
+
+  if ( head(c1, 1) != head(c2, 1) ){
+    print("codes belong to different macrosectors, s<-0")
+    return(0.0)
+  }
+  if (identical (c1, c2)){
+    print("codes are identical")
+    return(s)
+  }
+      
+  
+  while (!(identical (c1, c2))){
+    ln1=length(c1)
+    ln2=length(c2)
+    print(paste("now checking ", ln1, ln2,  " current similarity ", s))
+ 
+    if (ln1>=ln2){
+      c1 = head(c1,-1)
+      s <- s - w[ln1]
+    }
+    if (ln2>=ln1){
+      c2 = head(c2,-1)
+      s <- s - w[ln2]
+    }
+
+  }
+  print(paste("End: similarity <-", s))
+  return(s) 
+}
+
+splitnace <- function(nace){
+  if (length(nace) == 0 ){
+    print('some issues with nace code!')
+    print(nace)
+    return(c("00.00.00"))}
+  
+  result = strsplit(nace,".",fixed = TRUE)
+  return(result)
+}
+
+
+nace1 = "24.30.44"
+nace2 = "24.40.43"
+c1<-unlist(splitnace(nace1))
+c2<-unlist(splitnace(nace2))
+
+
+sim = similar_nace(c1,c2)
+
+dist = 1-sim
+print(sim)
+
+
+```
+## custimized distances {-}
+note that similar_nace() allows for customized distance s = 1 and weights w()
+but sets default values s=1, w=c(...)
+
+```{r}
+sim = similar_nace(c1,c2,s=5, w=c(1,1,1))
+
+```
+
+
+
+Note that NACE codes datasets may contain non valid codes. The following functions replaces them with a code that generates similarity <-0
+
+check_nace <- function(nace_code){
+  if (length(nace_code) == 0 ){
+    print(paste("NACE code ", nace_code, "has length zero. replaced by 00.00.00"))
+    return(c("00.00.00"))}
+
+```{r}
+
+```
+
+
+
+  
+```{r}
+#TODO proseguire caricando il dataset completo e calcolando la matrice di tutte le distanze
+
+pairwise_distance <- function(id_imp_1, id_imp_2, imp){#imp è il dataset completo delle imprese
+        naces_imp_1 <- unlist(imp[id_imp_1, 3], recursive = TRUE)
+        naces_imp_2 <- unlist(imp[id_imp_2, 3], recursive = TRUE)
+        print('##')
+        print(id_imp_1)
+        print(id_imp_2)
+        print(naces_imp_1)
+        print(naces_imp_2)
+        dist_list <-0
+        l1 <-  length(naces_imp_1)
+        l2 <-  length(naces_imp_2)
+        for (ci in 1:l1){
+                for (cj in 1:l2){
+                        n1 = unlist(splitnace(naces_imp_1[ci]))
+                        n2 = unlist(splitnace(naces_imp_2[cj]))
+                        print(n1)
+                        print(n2)
+                        
+                        d = 1- similar_nace(n1, n2, 1)
+                        dist_list <- c(dist_list, d)
+
+                        print(dist_list)
+
+                 }
+        }
+        return(dist_list)
+}
+
+
+```
+

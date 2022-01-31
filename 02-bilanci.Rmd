@@ -51,8 +51,7 @@ bsd %>% write_csv(paste0(pathTidyData,"bsd.csv"))
 ```
 
 
- 
-# ```
+
 There are 18 columns but in this project we will use only 4, namely "cf", "year", revenues" and "staff cost". Data should be loaded as string and then converted taking into account some issues with format of numerical variables. 
  
 To convert bsd$revenues and bsd$staffcost to numbers, we need to remove the "." used as thousand separators, and replace "," with "." as a decimal separator.
@@ -98,3 +97,5 @@ figure <- ggplot(tmp, aes(x=logturnover,fill=year)) + geom_density(alpha=.2)
 figure
 
 ```
+
+
