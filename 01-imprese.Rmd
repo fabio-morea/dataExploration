@@ -13,10 +13,10 @@ pathTidyData = './../../_data/tidy/'
 library(tidyverse)
 library(ggpubr)
 library(ggthemes)
-theme_set(theme_economist()) #theme_minimal()
+theme_set(theme_stata()) #theme_minimal()
 ```
  
-This section is deditated to the exploration of data on companies that have a localization in Friuli Venezia Giulia. The origin of data is the Italian Business registry  (https://www.registroimprese.it/il-registro-imprese-per-la-p.a. ), and is managed by Infocamere (https://www.infocamere.it/). 
+This section is deditated to the exploration of data on companies that have their premises in Friuli Venezia Giulia. The origin of data is the Italian Business registry  (https://www.registroimprese.it/il-registro-imprese-per-la-p.a. ), and is managed by Infocamere (https://www.infocamere.it/). 
 
 ```{r}
 data.files <- list.files(pathRawData, pattern = ".csv$", recursive = TRUE)
@@ -81,10 +81,16 @@ Companies that are not active (e.g. due to bankruptcy, liquidation or suspended)
 
 ```{r}
 df<-companies %>% count(stato_impresa) 
-ggplot(data=df, aes(x=stato_impresa, y=n)) +   geom_bar(stat="identity") + coord_flip()
+plot1 <- ggplot(data=df, aes(x=stato_impresa, y=n)) +   geom_bar(stat="identity") + coord_flip() + theme(axis.text.y = element_text(angle = 0)) + theme_fivethirtyeight()
+plot1
+
+```
+
+```{r}
 companies <- subset(companies, stato_impresa =='ATTIVA')
 print(paste("Number of active companies: ", nrow(companies)), quote=FALSE)
 ```
+
 
 ### head office and local units
 Each company has a "registered office" (sede legale) and may have several local units (unità locale). Relevant data is stored in file "t_localizz.csv".
@@ -137,8 +143,8 @@ print(paste("The dataset contains ", nrow(df), "types of companies."), quote=FAL
 df <- df %>% inner_join(types)
 df <- df  %>% arrange(-n) 
 df$ngDescription <- factor(df$ngDescription, levels = df$ngDescription) #lock factors to keep the same order in the bar plot
-ggplot(data=head(df, 10), aes(x=ngDescription, y=n))  + geom_bar(stat="identity") + coord_flip() + ggtitle("Most common types") + geom_text(aes(x=ngDescription, y=n, label = n, hjust = -.2), color = "black") + ylim(NA, 22000)
-
+p3<-ggplot(data=head(df, 10), aes(x=ngDescription, y=n))  + geom_bar(stat="identity") + coord_flip() + ggtitle("Most common types") + geom_text(aes(x=ngDescription, y=n, label = n, hjust = -.2), color = "black") + ylim(NA, 22000) + theme(axis.text.y = element_text(angle = 0)) + theme_fivethirtyeight()
+p3
 
 
 ```
@@ -252,7 +258,7 @@ locs <- locs %>% filter(id_localiz %in% loc_in_NACE$id_localiz)  #filter locs da
 companies <- companies %>% filter(idCompany %in% locs$idCompany) #filter companies dataframe
 ```
  
-> TODO sectors are identified by first two digits of NACE codes.
+<!-- > TODO sectors are identified by first two digits of NACE codes. -->
 
 <!-- ``` -->
 <!-- Not all sectors are relevant for the research topic. We can restrict the dataset to manufacturing activities (codes 10 to 33)and research (sector = 72) -->
@@ -290,22 +296,6 @@ companies <- companies %>% filter(idCompany %in% locs$idCompany) #filter compani
 <!--  ```{r} -->
 
 
-companies<- subset(companies2, select = c('eta', 'cf', 'id_impresa') )
-ids <- unique(companies2$id_impresa)
-localiz <- read.csv("t_localizz.csv", sep = "|")
-localiz <- localiz[localiz$id_impresa %in% ids,]
-localiz <- subset(localiz, select = c('id_impresa', 'id_localiz'))
-locs <- unique(localiz$id_localiz)
-codici <- read.csv("t_codici.csv", sep = "|")
-codici <- codici[codici$id_localiz %in% locs,]
-codici <- subset(codici, select = c('id_localiz', 'ateco'))
-
-codici = merge(codici, localiz, by = "id_localiz")
-
-imp <- data.frame("company"=ids)
-imp$eta <- companies$eta
-imp$ateco <- NA
-
 <!-- #aggiunge al data.frame una lista di codici ateco -->
 <!-- for (impresa in imp$company){ -->
 <!--         temp = as.list(subset(codici, id_impresa == impresa)) -->
@@ -315,7 +305,7 @@ imp$ateco <- NA
 <!-- } -->
 
 "
-'''"
+ 
 
 ## tidy dataset
 

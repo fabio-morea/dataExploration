@@ -1,10 +1,10 @@
 --- 
-title: "Exploration of company information"
+title: "Data exploration and preliminary feature selection"
 author: "Fabio Morea"
 date: "`r Sys.Date()`"
 
-documentclass: scrbook
-classoption: openany
+documentclass: scrbook #
+classoption: openany   #avoid white pages between chapters
 
 output:
   bookdown::pdf_book:
@@ -17,21 +17,6 @@ biblio-style: apalike
 link-citations: yes
 delete_merged_file: true
 ---
-<!-- more options for pdf format -->
-<!-- documentclass: scrbook -->
-<!-- output: -->
-<!--   bookdown::pdf_book: -->
-<!--     template: null -->
- 
-<!-- documentclass: book -->
-<!-- output: -->
-<!--   bookdown::pdf_document2: default -->
-<!--   bookdown::gitbook: default -->
-<!-- site: bookdown::bookdown_site -->
-
- <!-- output: -->
- <!--  bookdown::pdf_book: -->
- <!--    base_format: rticles::jss_article -->
     
 # Scope and objectives  
 
