@@ -3,6 +3,7 @@ output:
   pdf_document: default
   html_document: default
 ---
+
 # Exploring dataset "bilanciFVG"
 This section is dedicated to load and preprocess financial statement data for the dataset *imprese-fvg*. 
 The relevant file is "_DATA/imprese-fvg/bilanci-fvg.csv".
@@ -11,7 +12,10 @@ The relevant file is "_DATA/imprese-fvg/bilanci-fvg.csv".
 # Local path, no need to display in knitted version
 pathRawData = './../../_data/raw/'
 pathTidyData = './../../_data/tidy/'
-library("tidyverse")
+library(tidyverse)
+library(ggpubr)
+library(ggthemes)
+theme_set(theme_economist()) #theme_minimal()
 ```
  
 The relevant file is *bilanci-fvg.csv*. Each observation is a summary of balance sheet data (bsd) of a company (identified by *cf*) for a given year. Column labels need some improvement to remove whitespaces and possibly short english names.
@@ -79,7 +83,7 @@ bsd3$logturnover <- log10(bsd3$turnover)
 # hist(bsd$logturnover)
 h1 <- ggplot(bsd3, aes(x=turnover)) + geom_histogram(color="black", fill="red")
 h2 <- ggplot(bsd3, aes(x=logturnover)) + geom_histogram(color="black", fill="green", aes(y=..density..))+  geom_density(alpha=.2, fill="#FF6666") 
-figure <- ggarrange(h1, h2,labels = c("linear", "log"), ncol = 2, nrow = 1)
+figure <- ggarrange(h1, h2)#labels = c("linear", "log"), ncol = 2, nrow = 1)
 figure
 
 ```

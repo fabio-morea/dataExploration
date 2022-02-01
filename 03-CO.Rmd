@@ -13,6 +13,11 @@ pathRawData = 'C:/Users/morea/OneDrive - Area Science Park/General - iifvg lavor
 pathTidyData = './../../_data/tidy/'
 library("tidyverse")
 data.files <- list.files(pathRawData, pattern = "dati_*", recursive = TRUE )
+
+library(tidyverse)
+library(ggpubr)
+library(ggthemes)
+theme_set(theme_economist()) #theme_minimal()
 ```
 
 
