@@ -53,14 +53,21 @@ Each company can be identified by its name, vat number, fiscal code, The followi
 - cf ("codice fiscale"): unique identifier, as factor. Values are unique for each company, but the structure depends on company type: generally a string of 11 digits, but individual companies refer to the owner's code, a string of 16 letters and digits;
 - idCompany ("id_impresa"): unique identifier, numeric, created in pre-processing phase.
 Other attributes (reg_imp_n,piva, n.albo_art,reg_imp_sez) are not relevant at this stage, and can be dropped. 
+- the registration number "reg_imp_n" will be used to link the data of staff count, so it is saved in a separate file "ids_reg_imp.csv"
+
 All identifiers will be converted to factors.
 
 ```{r}
+regImp = companies %>% 
+            select( c( id_impresa, denominazione, cf, reg_imp_n,`n-albo_art`,reg_imp_sez)) %>% 
+            write_csv(paste0(pathTidyData,"ids_reg_imp.csv"),)
+
 companies <- companies %>% 
-             select( !c(reg_imp_n, piva, `n-albo_art`,reg_imp_sez)) %>% 
+             select( !c( reg_imp_n, piva, `n-albo_art`,reg_imp_sez)) %>% 
              rename(name = denominazione) %>%
              rename(idCompany = id_impresa) %>%
              mutate_if(is.character, as.factor) 
+
 
 ```
 

@@ -1,0 +1,127 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Staff: stock of employees
+
+
+```{r include=FALSE}
+# Local path, no need to display in knitted version
+pathRawData = './../../_data/raw/staff/'
+pathTidyData = './../../_data/tidy/'
+library("tidyverse")
+data.files <- list.files(pathRawData, recursive = TRUE )
+
+library(tidyverse)
+library(readxl)
+library(ggpubr)
+library(ggthemes)
+theme_set(theme_minimal())
+```
+
+
+```{r}
+stock <- read_excel( paste0(pathRawData,'dettaglio_addetti_dicembre_2021.xlsx' )) 
+str(stock)
+```
+
+The original data is saved in a single excel file `r data.files[1]` and contains n=`r nrow(stock)` observations of p=`f length(names(stock))` features.
+
+Companies are identified by their registration number N_ISCRIZIONE_REA and CCIAA_REGZ: grouping these features we have a unique identifier that can be connected to the compani id.
+```{r}
+stock <- stock %>% 
+  mutate(id = paste0(CCIAA_REGZ, "-",N_ISCRIZIONE_REA)) %>%
+  rename(rea = N_ISCRIZIONE_REA)
+
+#check if id is unique
+length(stock$id) == length(unique(stock$id))
+ 
+```
+
+```{r}
+
+ids <- read_excel(paste0(pathRawData,"cmp_rea.xlsx" )) %>%
+  rename(cf = `c fiscale`) %>%
+  rename(prov = `PRV - Provincia`) %>%
+  rename(name = DENOMINAZIONE) %>%
+  select (rea,cf,name)
+```
+
+now we can join the tables
+       
+
+```{r}
+#join
+stock <- stock%>% inner_join(ids, by="rea")
+```
+
+ANNO_DEN_ADDETTI refers to the year when the number of employees has been updated. all the data refers to 31 December 2021, so an earlier year means that staff count has not changed since. Rows where year is NA carry no information and will be removed.
+```{r}
+stock <- stock %>% 
+  rename( year = ANNO_DEN_ADDETTI) %>% 
+  rename( prov = CCIAA_REGZ) %>%
+  filter(!is.na(year))
+```
+
+The other fields are the number of employees by category. 
+For the purpose of data esmploration we need to replace NA with 0, and calculate the total stock of employees.
+The total staff count in a company is given by  N_ADDETTI_FAMILIARI + N_ADDETTI_SUBORDINATI + N_COLLABORATORI, and refers to all local units, aniwhere in Italy.
+If we are interested in staff count by province, then we need to sum:
+N_ADDETTI_FAMILIARI_LOC + N_ADDETTI_SUBORDINATI_LOC. 
+
+For the purpose of data exploration, we ignore the variable N_COLLABORATORI.
+
+```{r}
+stock1 <- stock %>% 
+   replace(is.na(.), 0) %>%
+   mutate(TotStaff =  N_ADDETTI_FAMILIARI + N_ADDETTI_SUBORDINATI  ) %>%
+   mutate(ProvStaff = N_ADDETTI_FAMILIARI_LOC + N_ADDETTI_SUBORDINATI_LOC) %>%
+   select(cf, name, rea, prov, ProvStaff, TotStaff) %>%
+   distinct()
+
+stock2 <- stock1 %>% 
+  select(-ProvStaff)%>%
+  group_by(cf) %>% 
+  top_n(n=1) 
+
+```
+
+ 
+ 
+Now we can plot some values.
+
+
+```{r}
+
+
+plot1 <- stock1 %>% 
+            subset(prov %in% c("GO","TS","PN","UD")) %>%
+            subset(ProvStaff > 10 ) %>%
+            subset(ProvStaff <100 ) %>%
+            ggplot( aes(x=ProvStaff, y = prov)) +
+            ggtitle("Companies between 10 and 100 employees")+
+            geom_boxplot()
+
+data = stock1 %>% mutate(logStaff = log10(ProvStaff))
+
+plot2 <- data %>% 
+            subset(prov %in% c("GO","TS","PN","UD")) %>% 
+            subset(logStaff >= 1 ) %>%
+            ggplot( aes(x=logStaff , color = prov)) +
+            geom_density( )  + 
+            ggtitle("Above 10 employees (log scale)") #+ labs(x="number of employees", y="counf companies") 
+
+figure <- ggarrange(plot1, plot2)
+figure
+
+```
+
+
+
+```{r}
+stock1 <- stock1 %>% 
+    mutate(date_stock = "31-12_2021") %>%   #add the reference date 
+    write_csv(paste0(pathTidyData,"empl_stock.csv"))
+```
+
